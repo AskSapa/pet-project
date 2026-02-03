@@ -1,8 +1,6 @@
 package kg.mycloud.pocker.enums;
 
-public enum TournamentStatus {
-    SETUP,
+public enum CashGameStatus {
     ACTIVE,
-    PAUSED,
     FINISHED
 }

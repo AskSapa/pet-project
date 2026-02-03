@@ -1,0 +1,204 @@
+databaseChangeLog:
+  - changeSet:
+      id: 20240522-1
+      author: argen
+      changes:
+        - createTable:
+            tableName: players
+            columns:
+              - column:
+                  name: id
+                  type: VARCHAR(36)
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: name
+                  type: VARCHAR(255)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: avatar_color
+                  type: VARCHAR(20)
+              - column:
+                  name: created_at
+                  type: TIMESTAMP
+                  defaultValueComputed: CURRENT_TIMESTAMP
+              - column: { name: tournaments_played, type: INT, defaultValue: "0" }
+              - column: { name: wins, type: INT, defaultValue: "0" }
+              - column: { name: total_prize, type: "DECIMAL(19,2)", defaultValue: "0" }
+              - column: { name: total_rebuys, type: INT, defaultValue: "0" }
+              - column: { name: total_addons, type: INT, defaultValue: "0" }
+              - column: { name: best_place, type: INT }
+              - column: { name: cash_games_played, type: INT, defaultValue: "0" }
+              - column: { name: cash_winnings, type: "DECIMAL(19,2)", defaultValue: "0" }
+
+  - changeSet:
+      id: 20240522-2
+      author: argen
+      changes:
+        - createTable:
+            tableName: tournament_settings
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column: { name: buy_in, type: "DECIMAL(19,2)" }
+              - column: { name: rebuy_price, type: "DECIMAL(19,2)" }
+              - column: { name: addon_price, type: "DECIMAL(19,2)" }
+              - column: { name: prize_distribution, type: VARCHAR(1000), remarks: "Массив процентов через запятую" }
+              - column: { name: break_after_levels, type: INT }
+              - column: { name: break_duration, type: INT }
+
+  # 3. Уровни блайндов
+  - changeSet:
+      id: 20240522-3
+      author: argen
+      changes:
+        - createTable:
+            tableName: blind_levels
+            columns:
+              - column:
+                  name: id
+                  type: BIGINT
+                  autoIncrement: true
+                  constraints:
+                    primaryKey: true
+              - column:
+                  name: settings_id
+                  type: BIGINT
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_blind_levels_settings
+                    referencedTableName: tournament_settings
+                    referencedColumnNames: id
+              - column: { name: level_order, type: INT, constraints: { nullable: false } }
+              - column: { name: small_blind, type: INT }
+              - column: { name: big_blind, type: INT }
+              - column: { name: ante, type: INT, defaultValue: "0" }
+              - column: { name: duration, type: INT }
+
+  # 4. Турниры
+  - changeSet:
+      id: 20240522-4
+      author: argen
+      changes:
+        - createTable:
+            tableName: tournaments
+            columns:
+              - column:
+                  name: id
+                  type: VARCHAR(36)
+                  constraints:
+                    primaryKey: true
+              - column: { name: name, type: VARCHAR(255), constraints: { nullable: false } }
+              - column: { name: date, type: TIMESTAMP }
+              - column: { name: status, type: VARCHAR(20) }
+              - column:
+                  name: settings_id
+                  type: BIGINT
+                  constraints:
+                    foreignKeyName: fk_tournament_settings
+                    referencedTableName: tournament_settings
+                    referencedColumnNames: id
+              - column: { name: prize_pool, type: "DECIMAL(19,2)", defaultValue: "0" }
+              - column:
+                  name: winner_id
+                  type: VARCHAR(36)
+                  constraints:
+                    foreignKeyName: fk_tournament_winner
+                    referencedTableName: players
+                    referencedColumnNames: id
+              - column: { name: created_at, type: TIMESTAMP, defaultValueComputed: CURRENT_TIMESTAMP }
+              - column: { name: started_at, type: TIMESTAMP }
+              - column: { name: finished_at, type: TIMESTAMP }
+              # Таймер
+              - column: { name: current_level, type: INT, defaultValue: "0" }
+              - column: { name: level_start_time, type: BIGINT }
+              - column: { name: paused_time_remaining, type: BIGINT }
+              - column: { name: is_on_break, type: BOOLEAN, defaultValue: false }
+              - column: { name: total_paused_time, type: BIGINT, defaultValue: "0" }
+
+  # 5. Участники турнира
+  - changeSet:
+      id: 20240522-5
+      author: argen
+      changes:
+        - createTable:
+            tableName: tournament_players
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true } }
+              - column:
+                  name: tournament_id
+                  type: VARCHAR(36)
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_tp_tournament
+                    referencedTableName: tournaments
+                    referencedColumnNames: id
+                    deleteCascade: true
+              - column:
+                  name: player_id
+                  type: VARCHAR(36)
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_tp_player
+                    referencedTableName: players
+                    referencedColumnNames: id
+              - column: { name: rebuys, type: INT, defaultValue: "0" }
+              - column: { name: addons, type: INT, defaultValue: "0" }
+              - column: { name: is_out, type: BOOLEAN, defaultValue: false }
+              - column: { name: out_position, type: INT }
+              - column: { name: prize, type: "DECIMAL(19,2)", defaultValue: "0" }
+
+  # 6. Кэш-игры
+  - changeSet:
+      id: 20240522-6
+      author: argen
+      changes:
+        - createTable:
+            tableName: cash_games
+            columns:
+              - column: { name: id, type: VARCHAR(36), constraints: { primaryKey: true } }
+              - column: { name: name, type: VARCHAR(255) }
+              - column: { name: date, type: TIMESTAMP }
+              - column: { name: status, type: VARCHAR(20) }
+              - column: { name: small_blind, type: "DECIMAL(19,2)" }
+              - column: { name: big_blind, type: "DECIMAL(19,2)" }
+              - column: { name: min_buy_in, type: "DECIMAL(19,2)" }
+              - column: { name: started_at, type: TIMESTAMP }
+              - column: { name: finished_at, type: TIMESTAMP }
+
+  - changeSet:
+      id: 20240522-7
+      author: argen
+      changes:
+        - createTable:
+            tableName: cash_game_players
+            columns:
+              - column: { name: id, type: BIGINT, autoIncrement: true, constraints: { primaryKey: true } }
+              - column:
+                  name: cash_game_id
+                  type: VARCHAR(36)
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_cgp_game
+                    referencedTableName: cash_games
+                    referencedColumnNames: id
+                    deleteCascade: true
+              - column:
+                  name: player_id
+                  type: VARCHAR(36)
+                  constraints:
+                    nullable: false
+                    foreignKeyName: fk_cgp_player
+                    referencedTableName: players
+                    referencedColumnNames: id
+              - column: { name: buy_in, type: "DECIMAL(19,2)" }
+              - column: { name: cash_out, type: "DECIMAL(19,2)", defaultValue: "0" }
+              - column: { name: rebuys, type: INT, defaultValue: "0" }
+              - column: { name: total_invested, type: "DECIMAL(19,2)" }
